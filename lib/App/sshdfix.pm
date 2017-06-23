@@ -6,32 +6,36 @@ our $VERSION = '0.001';
 use Exporter 'import';
 our @EXPORT_OK = qw( fix_sshd );
 
-if (sshd_version() >= 6.7) {
+my $sshd_version = sshd_version();
+my (@host_keys_yes, %config_yes);
+if ($sshd_version >= 6.7) {
   # sshd versions newer than 6.7
   # These will be added if not present
-  my $host_keys_yes = (
+  @host_keys_yes = (
     '/etc/ssh/ssh_host_ed25519_key',
     '/etc/ssh/ssh_host_rsa_key',
     '/etc/ssh/ssh_host_ecdsa_key',
   );
-  my %config_yes = (
+  %config_yes = (
     KexAlgorithms => 'curve25519-sha256@libssh.org,ecdh-sha2-nistp521,ecdh-sha2-nistp384,ecdh-sha2-nistp256,diffie-hellman-group-exchange-sha256',
     Ciphers => 'chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr',
     MACs    => 'hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,umac-128-etm@openssh.com,hmac-sha2-512,hmac-sha2-256,umac-128@openssh.com',
     UsePrivilegeSeparation => 'sandbox',
   );
 }
-elsif (sshd_version() >= 5.3) {
+elsif ($sshd_version >= 5.3) {
   # Old ssh version 5.3 and above
-  my @host_keys_yes = (
+  @host_keys_yes = (
     '/etc/ssh/ssh_host_rsa_key',
     '/etc/ssh/ssh_host_ecdsa_key',
   );
-  my %config_yes = (
+  %config_yes = (
     KexAlgorithms => 'diffie-hellman-group-exchange-sha256',
     MACs => 'hmac-sha2-512,hmac-sha2-256',
     Ciphers => 'aes256-ctr,aes192-ctr,aes128-ctr'
   );
+} else {
+  die "Your sshd version is too old, or unrecognized. Exiting."
 }
 
 # These options will be set if the unsafe option is given
@@ -55,6 +59,7 @@ sub fix_sshd {
   return;
 }
 
+# sshd_version() - returns the sshd version installed on $PATH
 sub sshd_version {
   my $out = `sshd -v 2>&1 </dev/null`;
   if ($out =~ /(OpenSSH.([0-9\.]+))/i) {
@@ -129,17 +134,6 @@ sub set_directive {
     }
   }
   return $lines_ref;
-}
-
-# find_value(name, &config)
-sub find_value {
-  my ($name, $config_ref) = @_;
-  foreach my $c (@{$config_ref}) {
-    if (lc($c->{'name'}) eq lc($name)) {
-      return wantarray ? @{$c->{'values'}} : $c->{'values'}->[0];
-    }
-  }
-  return wantarray ? ( ) : undef;
 }
 
 # find(name, &config)
