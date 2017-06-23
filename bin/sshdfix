@@ -1,0 +1,76 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+BEGIN { $Pod::Usage::Formatter = 'Pod::Text::Color'; }
+use 5.010; # Version in CentOS 6
+use App::sshdfix qw( fix_sshd );
+
+use Getopt::Long qw( GetOptionsFromArray );
+use Pod::Usage;
+
+sub main {
+    my ( $argv ) = @_;
+    my %opt;
+    GetOptionsFromArray( $argv, \%opt,
+        'help|h',
+        'dryrun|d',
+        'unsafe|f',
+        'config|c=s'
+    );
+    pod2usage(0) if ($opt{help});
+
+    fix_sshd(\%opt);
+    return 0;
+}
+
+exit main( \@ARGV ) if !caller(0);
+
+1; # <module>.pm did not return a true value
+
+=pod
+
+=head1 NAME
+
+sshdfix
+
+=head1 SYNOPSIS
+
+sshdfix [options]
+
+=head1 OPTIONS
+
+=over
+
+=item --help, -h
+
+Print the usage summary and exit.
+
+=item --dryrun, -d
+
+This will analyze the sshd_config file and print the config file it would
+produce but does not change the configuration file.
+
+=item --unsafe, -f
+
+Force sshdfix to make changes to the sshd_config that could potentially
+lock out some or all users. Make sure you have at least one sudo-capable
+user with a key-based login that is known to work with modern ciphers, or
+you have another way to access your system as root.
+
+=item --config, -c
+
+Specify the full path to the sshd_config file. Defaults to
+C</etc/ssh/sshd_config>
+
+=head1 EXIT CODES
+
+0 on success
+
+non-0 on error
+
+=head1 LICENSE AND COPYRIGHT
+
+Copyright 2017 Joe Cooper <swelljoe@gmail.com>
+
+This program is free software; you may redistribute it and/or modify it under
+the same terms as Perl itself.
